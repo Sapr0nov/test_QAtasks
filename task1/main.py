@@ -9,9 +9,10 @@ from pathlib import Path
 from datetime import datetime
 
 
-def get_and_check(check=1, ask='Enter some Number',
+def get_and_check(check=1, default_value='', ask='Enter some Number',
                   hint='The value must be positive Number e.g. [10]'):
     """
+    :param default_value: value used if pressed [Enter] with empty string
     :param check: Number of revise option: 1 checked Integer > 0; 2 checked file exist; 4 checked smt more
     :param ask: String with asked text
     :param hint: String with hint if parameter was entering incorrect
@@ -22,7 +23,9 @@ def get_and_check(check=1, ask='Enter some Number',
 
     while not data_correct:
         data_correct = True
-        result = input(ask + ':')
+        result = input(ask + ' default = [' + default_value + '] ' + ':')
+        if result == "":
+            result = default_value
 
         if check == 1:
             if (not result.isdigit()) or (int(result) < 0):
@@ -37,33 +40,36 @@ def get_and_check(check=1, ask='Enter some Number',
 
 
 dir_path_self = os.path.dirname(os.path.realpath(__file__))
-Path(dir_path_self + "/log").mkdir(parents=True, exist_ok=True)
+Path(dir_path_self + "\\log").mkdir(parents=True, exist_ok=True)
 
 config = configparser.ConfigParser()
-dir_ini_file = dir_path_self + '/settings.ini'
-ini_file = open(dir_ini_file, "a")  # create if no ini file
-ini_file.close()
-print(config.read(dir_ini_file))
-if config['DEFAULT'] is None:
-    config['DEFAULT']['interval'] = 1
-    config['DEFAULT']['path'] = ""
-    config.write(ini_file)
+dir_ini_file = dir_path_self + '\\settings.ini'
 
-if config['DEFAULT']['interval'] is None:
-    config['DEFAULT']['interval'] = 1
+if not os.path.isfile(dir_ini_file):
+    print('create settings file')
+    ini_file = open(dir_ini_file, "w")  # create if no ini file
+    ini_file.close()
+else:
 
-if config['DEFAULT']['path'] is None:
+    config.read(dir_ini_file)
+
+if not config.has_option(None,'interval'):
+    print('loading default settings')
+    config['DEFAULT']['interval'] = "1"
     config['DEFAULT']['path'] = ""
+
+
 
 interval_get_stat = int(get_and_check(1, config['DEFAULT']['interval'], 'Enter a Interval in seconds',
-                                      'The interval must be a positive Number e.g. [10]'))
+                                      'The interval must be a positive Number'))
 path_file_process = get_and_check(2, config['DEFAULT']['path'], 'Enter a path to file',
-                                  'The path must be a full path for a file, e.g. E:/Program Files/Opera.exe')
+                                  'The path must be a full path for a file')
 
-config['DEFAULT']['interval'] = interval_get_stat
+config['DEFAULT']['interval'] = str(interval_get_stat)
 config['DEFAULT']['path'] = path_file_process
-with open(ini_file) as configfile:
-    config.write(configfile)
+ini_file = open(dir_ini_file, "w")
+config.write(ini_file)
+ini_file.close()
 
 # log file format YYMMDD-nameApp.csv
 name_log_file = datetime.now().strftime('%y%m%d') + '_' + os.path.basename(path_file_process)
