@@ -4,6 +4,7 @@ import csv
 import time
 import psutil
 import subprocess
+import configparser
 from pathlib import Path
 from datetime import datetime
 
@@ -35,16 +36,37 @@ def get_and_check(check=1, ask='Enter some Number',
     return result
 
 
-interval_get_stat = int(get_and_check(1, 'Enter a Interval in seconds',
-                                      'The interval must be a positive Number e.g. [10]'))
-path_file_process = get_and_check(2, 'Enter a path to file',
-                                  'The path must be a full path for a file, e.g. E:/Program Files/Opera.exe')
-
 dir_path_self = os.path.dirname(os.path.realpath(__file__))
 Path(dir_path_self + "/log").mkdir(parents=True, exist_ok=True)
+
+config = configparser.ConfigParser()
+dir_ini_file = dir_path_self + '/settings.ini'
+ini_file = open(dir_ini_file, "a")  # create if no ini file
+ini_file.close()
+print(config.read(dir_ini_file))
+if config['DEFAULT'] is None:
+    config['DEFAULT']['interval'] = 1
+    config['DEFAULT']['path'] = ""
+    config.write(ini_file)
+
+if config['DEFAULT']['interval'] is None:
+    config['DEFAULT']['interval'] = 1
+
+if config['DEFAULT']['path'] is None:
+    config['DEFAULT']['path'] = ""
+
+interval_get_stat = int(get_and_check(1, config['DEFAULT']['interval'], 'Enter a Interval in seconds',
+                                      'The interval must be a positive Number e.g. [10]'))
+path_file_process = get_and_check(2, config['DEFAULT']['path'], 'Enter a path to file',
+                                  'The path must be a full path for a file, e.g. E:/Program Files/Opera.exe')
+
+config['DEFAULT']['interval'] = interval_get_stat
+config['DEFAULT']['path'] = path_file_process
+with open(ini_file) as configfile:
+    config.write(configfile)
+
 # log file format YYMMDD-nameApp.csv
 name_log_file = datetime.now().strftime('%y%m%d') + '_' + os.path.basename(path_file_process)
-
 output_file = open(dir_path_self + '/log/' + name_log_file + '.csv', 'w', encoding='UTF8')
 writer = csv.writer(output_file, dialect='unix')
 
@@ -60,6 +82,7 @@ while psutil.pid_exists(testing_app.pid):
         files = p.num_handles()
 
     row = [p.cpu_percent(), mem.rss, mem.vms, files]
+    print(row)
     writer.writerow(row)
     time.sleep(interval_get_stat)
 
